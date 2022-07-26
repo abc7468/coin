@@ -1,10 +1,10 @@
 package main
 
-import (
-	"coin/rest"
-)
+import "coin/blockchain"
 
 func main() {
-
-	rest.Start(4000)
+	blockchain.Blockchain().AddBlock("First")
+	blockchain.Blockchain().AddBlock("Second")
+	blockchain.Blockchain().AddBlock("Third")
+	blockchain.Blockchain().AddBlock("Fourth")
 }
