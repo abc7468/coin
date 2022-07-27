@@ -1,10 +1,11 @@
 package main
 
-import "coin/blockchain"
+import (
+	"coin/cli"
+	"coin/db"
+)
 
 func main() {
-	blockchain.Blockchain().AddBlock("First")
-	blockchain.Blockchain().AddBlock("Second")
-	blockchain.Blockchain().AddBlock("Third")
-	blockchain.Blockchain().AddBlock("Fourth")
+	defer db.Close()
+	cli.Start()
 }

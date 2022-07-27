@@ -10,7 +10,6 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
-	"strconv"
 )
 
 type addBlockBody struct {
@@ -31,7 +30,7 @@ type errorResponse struct {
 // @Success 200
 func showBlocks(c *gin.Context) {
 	c.Header("Content-Type", "application/json")
-	json.NewEncoder(c.Writer).Encode(blockchain.GetBlockchain().AllBlocks())
+	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain().Blocks())
 }
 
 // Welcome godoc
@@ -47,14 +46,13 @@ func addBlocks(c *gin.Context) {
 	var addBlockBody addBlockBody
 	err := json.NewDecoder(c.Request.Body).Decode(&addBlockBody)
 	utils.HandleErr(err)
-	blockchain.GetBlockchain().AddBlock(addBlockBody.Message)
+	blockchain.Blockchain().AddBlock(addBlockBody.Message)
 	c.Writer.WriteHeader(http.StatusCreated)
 }
 
 func getBlock(c *gin.Context) {
-	height, err := strconv.Atoi(c.Param("height"))
-	utils.HandleErr(err)
-	block, err := blockchain.GetBlockchain().GetBlock(height)
+	hash := c.Param("hash")
+	block, err := blockchain.FindBlock(hash)
 	encoder := json.NewEncoder(c.Writer)
 	if err == blockchain.ErrNotFound {
 		encoder.Encode(errorResponse{fmt.Sprint(err)})
@@ -90,6 +88,6 @@ func Start(port int) {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
 	r.POST("/blocks", addBlocks)
-	r.GET("/blocks/:height", getBlock)
+	r.GET("/blocks/:hash", getBlock)
 	r.Run(fmt.Sprintf(":%d", port))
 }

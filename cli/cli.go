@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 )
 
 func usage() {
@@ -13,7 +14,7 @@ func usage() {
 	fmt.Printf("Please use the following flag:\n\n")
 	fmt.Printf("-port=4000:	Set the PORT of the server\n")
 	fmt.Printf("-mode=rest:	Start the REST API\n\n")
-	os.Exit(1)
+	runtime.Goexit()
 }
 func Start() {
 	if len(os.Args) == 1 {

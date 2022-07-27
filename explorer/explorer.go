@@ -17,8 +17,8 @@ type homeData struct {
 }
 
 func showHomePage(c *gin.Context) {
-	data := homeData{"roy coin", blockchain.GetBlockchain().AllBlocks()}
-	c.HTML(http.StatusOK, "home", data)
+	//data := homeData{"roy coin", blockchain.GetBlockchain().AllBlocks()}
+	c.HTML(http.StatusOK, "home", nil)
 }
 func showAddPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "add", nil)
@@ -36,7 +36,7 @@ func showAddPage(c *gin.Context) {
 func addBlock(c *gin.Context) {
 	c.Request.ParseForm()
 	data := c.PostForm("data")
-	blockchain.GetBlockchain().AddBlock(data)
+	blockchain.Blockchain().AddBlock(data)
 	c.Redirect(http.StatusMovedPermanently, "home")
 }
 
