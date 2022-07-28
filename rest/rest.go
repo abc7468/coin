@@ -50,6 +50,15 @@ func addBlocks(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusCreated)
 }
 
+// Welcome godoc
+// @Summary 하나의 블록 데이터를 출력
+// @Description 입력 해쉬값을 key로 가진 하나의 블록 데이터를 출력합니다.
+// @name show-block
+// @Accept  json
+// @Produce  json
+// @Param hash address string true "추가하고자 하는 Block의 Data"
+// @Router /blocks/{hash} [Get]
+// @Success 200
 func getBlock(c *gin.Context) {
 	hash := c.Param("hash")
 	block, err := blockchain.FindBlock(hash)
@@ -59,6 +68,18 @@ func getBlock(c *gin.Context) {
 	} else {
 		encoder.Encode(block)
 	}
+}
+
+// Welcome godoc
+// @Summary 블록체인의 현 상태 출력
+// @Description 블록체인에 포함된 블록들의 정보를 출력합니다.
+// @name show-blocks
+// @Accept  json
+// @Produce  json
+// @Router /status [Get]
+// @Success 200
+func showBlockchain(c *gin.Context) {
+	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain())
 }
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -87,6 +108,7 @@ func Start(port int) {
 	r.Use(CORSMiddleware())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
+	r.GET("/status", showBlockchain)
 	r.POST("/blocks", addBlocks)
 	r.GET("/blocks/:hash", getBlock)
 	r.Run(fmt.Sprintf(":%d", port))

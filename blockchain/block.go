@@ -4,6 +4,7 @@ import (
 	"coin/db"
 	"coin/utils"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -43,6 +44,7 @@ func (b *Block) mine() {
 		hash := utils.Hash(b)
 		if strings.HasPrefix(hash, target) {
 			b.Hash = hash
+			fmt.Printf("Target:%s\nHash:%s\nNonce:%d\n\n\n", target, hash, b.Nonce)
 			break
 		} else {
 			b.Nonce++
