@@ -12,12 +12,13 @@ import (
 	"net/http"
 )
 
-type addBlockBody struct {
-	Message string `json:"message"`
-}
-
 type errorResponse struct {
 	ErrorMessage string `json:"errorMessage"`
+}
+
+type balanceResponse struct {
+	Address string `json:"address"`
+	Balance int    `json:"balance"`
 }
 
 // Welcome godoc
@@ -43,10 +44,7 @@ func showBlocks(c *gin.Context) {
 // @Router /blocks [POST]
 // @Success 201
 func addBlocks(c *gin.Context) {
-	var addBlockBody addBlockBody
-	err := json.NewDecoder(c.Request.Body).Decode(&addBlockBody)
-	utils.HandleErr(err)
-	blockchain.Blockchain().AddBlock(addBlockBody.Message)
+	blockchain.Blockchain().AddBlock()
 	c.Writer.WriteHeader(http.StatusCreated)
 }
 
@@ -56,7 +54,7 @@ func addBlocks(c *gin.Context) {
 // @name show-block
 // @Accept  json
 // @Produce  json
-// @Param hash address string true "추가하고자 하는 Block의 Data"
+// @Param hash path string true "추가하고자 하는 Block의 Data"
 // @Router /blocks/{hash} [Get]
 // @Success 200
 func getBlock(c *gin.Context) {
@@ -82,6 +80,42 @@ func showBlockchain(c *gin.Context) {
 	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain())
 }
 
+// Welcome godoc
+// @Summary Address를 통해 balance를 출력
+// @Description 입력한 Address의 Balance를 출력합니다.
+// @name balance
+// @Accept  json
+// @Produce  json
+// @Param address path string true "Balance를 확인하고자하는 address"
+// @Router /balance/{address} [Get]
+// @Success 200
+func getBalance(c *gin.Context) {
+	address := c.Param("address")
+	encoder := json.NewEncoder(c.Writer)
+	total := c.Query("total")
+	switch total {
+	case "true":
+		amount := blockchain.Blockchain().BalanceByAddress(address)
+		json.NewEncoder(c.Writer).Encode(balanceResponse{address, amount})
+	default:
+		utils.HandleErr(encoder.Encode(blockchain.Blockchain().TxOutsByAddress(address)))
+	}
+
+}
+
+// Welcome godoc
+// @Summary Address를 통해 balance를 출력
+// @Description 입력한 Address의 Balance를 출력합니다.
+// @name balance
+// @Accept  json
+// @Produce  json
+// @Param address path string true "Balance를 확인하고자하는 address"
+// @Router /mempool [Get]
+// @Success 200
+func mempool(c gin.Context) {
+	utils.HandleErr(json.NewEncoder(c.Writer).Encode(blockchain.Mempool.Txs))
+}
+
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin")
@@ -97,6 +131,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
 func Start(port int) {
 
 	r := gin.Default()
@@ -109,7 +144,10 @@ func Start(port int) {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
 	r.GET("/status", showBlockchain)
-	r.POST("/blocks", addBlocks)
 	r.GET("/blocks/:hash", getBlock)
+	r.GET("/balance/:address", getBalance)
+	r.GET("/mempool", mempool)
+	r.POST("/blocks", addBlocks)
+
 	r.Run(fmt.Sprintf(":%d", port))
 }

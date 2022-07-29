@@ -34,9 +34,8 @@ func showAddPage(c *gin.Context) {
 // @Router /add [POST]
 // @Success 301
 func addBlock(c *gin.Context) {
-	c.Request.ParseForm()
-	data := c.PostForm("data")
-	blockchain.Blockchain().AddBlock(data)
+
+	blockchain.Blockchain().AddBlock()
 	c.Redirect(http.StatusMovedPermanently, "home")
 }
 
