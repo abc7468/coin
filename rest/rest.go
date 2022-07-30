@@ -21,6 +21,11 @@ type balanceResponse struct {
 	Balance int    `json:"balance"`
 }
 
+type addTxPayload struct {
+	To     string `json:"to"`
+	Amount int    `json:"amount"`
+}
+
 // Welcome godoc
 // @Summary 현재 blockchain의 모든 Block을 출력.
 // @Description blockchain의 현 상태를 출력.
@@ -46,6 +51,7 @@ func showBlocks(c *gin.Context) {
 func addBlocks(c *gin.Context) {
 	blockchain.Blockchain().AddBlock()
 	c.Writer.WriteHeader(http.StatusCreated)
+
 }
 
 // Welcome godoc
@@ -58,6 +64,7 @@ func addBlocks(c *gin.Context) {
 // @Router /blocks/{hash} [Get]
 // @Success 200
 func getBlock(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
 	hash := c.Param("hash")
 	block, err := blockchain.FindBlock(hash)
 	encoder := json.NewEncoder(c.Writer)
@@ -77,6 +84,7 @@ func getBlock(c *gin.Context) {
 // @Router /status [Get]
 // @Success 200
 func showBlockchain(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
 	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain())
 }
 
@@ -90,6 +98,7 @@ func showBlockchain(c *gin.Context) {
 // @Router /balance/{address} [Get]
 // @Success 200
 func getBalance(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
 	address := c.Param("address")
 	encoder := json.NewEncoder(c.Writer)
 	total := c.Query("total")
@@ -98,7 +107,7 @@ func getBalance(c *gin.Context) {
 		amount := blockchain.Blockchain().BalanceByAddress(address)
 		json.NewEncoder(c.Writer).Encode(balanceResponse{address, amount})
 	default:
-		utils.HandleErr(encoder.Encode(blockchain.Blockchain().TxOutsByAddress(address)))
+		utils.HandleErr(encoder.Encode(blockchain.Blockchain().UTxOutsByAddress(address)))
 	}
 
 }
@@ -112,8 +121,21 @@ func getBalance(c *gin.Context) {
 // @Param address path string true "Balance를 확인하고자하는 address"
 // @Router /mempool [Get]
 // @Success 200
-func mempool(c gin.Context) {
+func mempool(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
 	utils.HandleErr(json.NewEncoder(c.Writer).Encode(blockchain.Mempool.Txs))
+}
+
+func transactions(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
+	var payload addTxPayload
+	utils.HandleErr(json.NewDecoder(c.Request.Body).Decode(&payload))
+	err := blockchain.Mempool.AddTx(payload.To, payload.Amount)
+	if err != nil {
+		json.NewEncoder(c.Writer).Encode(errorResponse{"not enough funds"})
+	}
+	c.Writer.WriteHeader(http.StatusCreated)
+
 }
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -147,6 +169,7 @@ func Start(port int) {
 	r.GET("/blocks/:hash", getBlock)
 	r.GET("/balance/:address", getBalance)
 	r.GET("/mempool", mempool)
+	r.POST("/transactions", transactions)
 	r.POST("/blocks", addBlocks)
 
 	r.Run(fmt.Sprintf(":%d", port))
