@@ -36,7 +36,7 @@ type addTxPayload struct {
 // @Success 200
 func showBlocks(c *gin.Context) {
 	c.Header("Content-Type", "application/json")
-	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain().Blocks())
+	json.NewEncoder(c.Writer).Encode(blockchain.Blocks(blockchain.Blockchain()))
 }
 
 // Welcome godoc
@@ -104,10 +104,10 @@ func getBalance(c *gin.Context) {
 	total := c.Query("total")
 	switch total {
 	case "true":
-		amount := blockchain.Blockchain().BalanceByAddress(address)
+		amount := blockchain.BalanceByAddress(address, blockchain.Blockchain())
 		json.NewEncoder(c.Writer).Encode(balanceResponse{address, amount})
 	default:
-		utils.HandleErr(encoder.Encode(blockchain.Blockchain().UTxOutsByAddress(address)))
+		utils.HandleErr(encoder.Encode(blockchain.UTxOutsByAddress(address, blockchain.Blockchain())))
 	}
 
 }
