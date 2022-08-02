@@ -4,6 +4,7 @@ import (
 	"coin/blockchain"
 	"coin/docs"
 	"coin/utils"
+	"coin/wallet"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,10 @@ type balanceResponse struct {
 type addTxPayload struct {
 	To     string `json:"to"`
 	Amount int    `json:"amount"`
+}
+
+type walletRes struct {
+	Address string `json:"address"`
 }
 
 // Welcome godoc
@@ -127,15 +132,20 @@ func mempool(c *gin.Context) {
 }
 
 func transactions(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
 	var payload addTxPayload
 	utils.HandleErr(json.NewDecoder(c.Request.Body).Decode(&payload))
 	err := blockchain.Mempool.AddTx(payload.To, payload.Amount)
 	if err != nil {
-		json.NewEncoder(c.Writer).Encode(errorResponse{"not enough funds"})
+		c.Writer.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(c.Writer).Encode(errorResponse{err.Error()})
 	}
 	c.Writer.WriteHeader(http.StatusCreated)
 
+}
+
+func getWallet(c *gin.Context) {
+	address := wallet.Wallet().Address
+	json.NewEncoder(c.Writer).Encode(walletRes{address})
 }
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -169,6 +179,7 @@ func Start(port int) {
 	r.GET("/blocks/:hash", getBlock)
 	r.GET("/balance/:address", getBalance)
 	r.GET("/mempool", mempool)
+	r.GET("/wallet", getWallet)
 	r.POST("/transactions", transactions)
 	r.POST("/blocks", addBlocks)
 

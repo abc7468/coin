@@ -8,6 +8,6 @@ import (
 
 func main() {
 	defer db.Close()
-	wallet.Start()
+	wallet.Wallet()
 	cli.Start()
 }
