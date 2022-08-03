@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"strings"
 )
 
 func HandleErr(err error) {
@@ -29,4 +30,12 @@ func Hash(i any) string {
 	s := fmt.Sprintf("%v", i)
 	hash := sha256.Sum256([]byte(s))
 	return fmt.Sprintf("%x", hash)
+}
+
+func GetSplitedStrings(s string, sep string, i int) string {
+	res := strings.Split(s, sep)
+	if i >= len(res) {
+		return ""
+	}
+	return res[i]
 }

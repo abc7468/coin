@@ -3,6 +3,7 @@ package rest
 import (
 	"coin/blockchain"
 	"coin/docs"
+	"coin/p2p"
 	"coin/utils"
 	"coin/wallet"
 	"encoding/json"
@@ -12,6 +13,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
 )
+
+var port string
 
 type errorResponse struct {
 	ErrorMessage string `json:"errorMessage"`
@@ -29,6 +32,11 @@ type addTxPayload struct {
 
 type walletRes struct {
 	Address string `json:"address"`
+}
+
+type addPeerPayload struct {
+	Address string `json:"address"`
+	Port    string `json:"port"`
 }
 
 // Welcome godoc
@@ -127,7 +135,6 @@ func getBalance(c *gin.Context) {
 // @Router /mempool [Get]
 // @Success 200
 func mempool(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
 	utils.HandleErr(json.NewEncoder(c.Writer).Encode(blockchain.Mempool.Txs))
 }
 
@@ -148,11 +155,30 @@ func getWallet(c *gin.Context) {
 	json.NewEncoder(c.Writer).Encode(walletRes{address})
 }
 
+func addPeer(c *gin.Context) {
+	var payload addPeerPayload
+	utils.HandleErr(json.NewDecoder(c.Request.Body).Decode(&payload))
+
+	p2p.AddPeer(payload.Address, payload.Port, port[1:])
+	c.Writer.WriteHeader(http.StatusOK)
+}
+
+func showPeers(c *gin.Context) {
+	json.NewEncoder(c.Writer).Encode(p2p.AllPeers(&p2p.Peers))
+}
+
+func loggerMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		fmt.Println(c.Request.URL)
+		c.Next()
+	}
+}
+
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin")
+		c.Header("Access-Control-Allow-Headers", "*")
 		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Origin", "http://localhost:4000")
+		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, DELETE, POST")
 
 		if c.Request.Method == "OPTIONS" {
@@ -164,15 +190,15 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
-func Start(port int) {
-
+func Start(aPort int) {
+	port = fmt.Sprintf(":%d", aPort)
 	r := gin.Default()
 	docs.SwaggerInfo.Description = "This is a sample server for Swagger."
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", port)
+	docs.SwaggerInfo.Host = fmt.Sprintf("localhost%s", port)
 	docs.SwaggerInfo.Title = "Swagger Example Test"
 
-	r.Use(CORSMiddleware())
+	r.Use(loggerMiddleware())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
 	r.GET("/status", showBlockchain)
@@ -180,8 +206,11 @@ func Start(port int) {
 	r.GET("/balance/:address", getBalance)
 	r.GET("/mempool", mempool)
 	r.GET("/wallet", getWallet)
+	r.GET("/ws", p2p.Upgrade)
+	r.GET("/peers", showPeers)
 	r.POST("/transactions", transactions)
 	r.POST("/blocks", addBlocks)
+	r.POST("/peers", addPeer)
 
-	r.Run(fmt.Sprintf(":%d", port))
+	r.Run(port)
 }
