@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -38,4 +39,10 @@ func GetSplitedStrings(s string, sep string, i int) string {
 		return ""
 	}
 	return res[i]
+}
+
+func ToJson(x any) []byte {
+	r, err := json.Marshal(x)
+	HandleErr(err)
+	return r
 }

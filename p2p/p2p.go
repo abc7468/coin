@@ -16,6 +16,8 @@ func Upgrade(c *gin.Context) {
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return ip != "" && openPort != ""
 	}
+	fmt.Printf("%s want to Upgarde\n", openPort)
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	utils.HandleErr(err)
 
@@ -24,8 +26,9 @@ func Upgrade(c *gin.Context) {
 }
 
 func AddPeer(address, port, openPort string) {
+	fmt.Printf("%s want to connect to port %s\n", openPort, port)
 	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s:%s/ws?openPort=%s", address, port, openPort), nil)
 	utils.HandleErr(err)
-	initPeer(conn, address, port)
-
+	p := initPeer(conn, address, port)
+	sendNewestBlock(p)
 }
