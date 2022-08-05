@@ -2,11 +2,13 @@ package db
 
 import (
 	"coin/utils"
+	"fmt"
 	bolt "go.etcd.io/bbolt"
+	"os"
 )
 
 const (
-	dbName       = "blockchain.db"
+	dbName       = "blockchain"
 	dataBucket   = "data"
 	blocksBucket = "blocks"
 
@@ -15,9 +17,13 @@ const (
 
 var db *bolt.DB
 
+func getDbName() string {
+	port := os.Args[2][6:]
+	return fmt.Sprintf("%s_%s.db", dbName, port)
+}
 func DB() *bolt.DB {
 	if db == nil {
-		dbPointer, err := bolt.Open(dbName, 0600, nil)
+		dbPointer, err := bolt.Open(getDbName(), 0600, nil)
 		db = dbPointer
 		utils.HandleErr(err)
 		err = db.Update(func(t *bolt.Tx) error {
@@ -52,7 +58,14 @@ func SaveCheckpoint(data []byte) {
 	})
 	utils.HandleErr(err)
 }
-
+func EmptyBlocks() {
+	DB().Update(func(t *bolt.Tx) error {
+		utils.HandleErr(t.DeleteBucket([]byte(blocksBucket)))
+		_, err := t.CreateBucket([]byte(blocksBucket))
+		utils.HandleErr(err)
+		return nil
+	})
+}
 func Checkpoint() []byte {
 	var data []byte
 	DB().View(func(tx *bolt.Tx) error {

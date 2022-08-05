@@ -48,8 +48,7 @@ type addPeerPayload struct {
 // @Router /blocks [GET]
 // @Success 200
 func showBlocks(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
-	json.NewEncoder(c.Writer).Encode(blockchain.Blocks(blockchain.Blockchain()))
+	blockchain.Status(blockchain.Blockchain(), c)
 }
 
 // Welcome godoc

@@ -3,7 +3,9 @@ package blockchain
 import (
 	"coin/db"
 	"coin/utils"
+	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"sync"
 )
 
@@ -17,6 +19,7 @@ type blockchain struct {
 	NewestHash        string `json:"newestHash"`
 	Height            int    `json:"height"`
 	CurrentDifficulty int    `json:"currentDifficulty"`
+	mu                sync.Mutex
 }
 
 var b *blockchain
@@ -56,6 +59,8 @@ func (b *blockchain) AddBlock() {
 }
 
 func Blocks(b *blockchain) []*Block {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	var blocks []*Block
 	hashCursor := b.NewestHash
 	for {
@@ -130,6 +135,26 @@ func BalanceByAddress(address string, b *blockchain) int {
 		amount += txOut.Amount
 	}
 	return amount
+}
+
+func (b *blockchain) Replace(newBlocks []*Block) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.CurrentDifficulty = newBlocks[0].Difficulty
+	b.Height = len(newBlocks)
+	b.NewestHash = newBlocks[0].Hash
+	persistBlockchain(b)
+	db.EmptyBlocks()
+	for _, block := range newBlocks {
+		persistBlock(block)
+	}
+}
+
+func Status(b *blockchain, c *gin.Context) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	json.NewEncoder(c.Writer).Encode(Blocks(Blockchain()))
+
 }
 
 func Blockchain() *blockchain {
