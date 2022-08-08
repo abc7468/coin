@@ -12,6 +12,7 @@ type peer struct {
 	port    string
 	conn    *websocket.Conn
 	inbox   chan []byte
+	mu      sync.Mutex
 }
 
 type peers struct {

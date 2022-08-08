@@ -5,6 +5,7 @@ import (
 	"coin/utils"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type MessageKind int
@@ -13,6 +14,9 @@ const (
 	MessageNewestBlock MessageKind = iota
 	MessageAllBlocksRequest
 	MessageAllBlocksResponse
+	MessageNewBlockNotify
+	MessageNewTxNotify
+	MessageNewPeerNotify
 )
 
 type Message struct {
@@ -45,6 +49,15 @@ func sendAllBlocks(p *peer) {
 	m := makeMessage(MessageAllBlocksResponse, blockchain.Blocks(blockchain.Blockchain()))
 	p.inbox <- m
 }
+func notifyNewBlock(b *blockchain.Block, p *peer) {
+	m := makeMessage(MessageNewBlockNotify, b)
+	p.inbox <- m
+}
+
+func notifyNewTx(tx *blockchain.Tx, p *peer) {
+	m := makeMessage(MessageNewTxNotify, tx)
+	p.inbox <- m
+}
 
 func handleMsg(m *Message, p *peer) {
 	switch m.Kind {
@@ -69,5 +82,18 @@ func handleMsg(m *Message, p *peer) {
 		var payload []*blockchain.Block
 		utils.HandleErr(json.Unmarshal(m.Payload, &payload))
 		blockchain.Blockchain().Replace(payload)
+	case MessageNewBlockNotify:
+		var payload *blockchain.Block
+		utils.HandleErr(json.Unmarshal(m.Payload, &payload))
+		blockchain.Blockchain().AddPeerBlock(payload)
+	case MessageNewTxNotify:
+		var payload *blockchain.Tx
+		utils.HandleErr(json.Unmarshal(m.Payload, &payload))
+		blockchain.Mempool().AddPeerTx(payload)
+	case MessageNewPeerNotify:
+		var payload string
+		utils.HandleErr(json.Unmarshal(m.Payload, &payload))
+		parts := strings.Split(payload, ":")
+		AddPeer(parts[0], parts[1], parts[2], false)
 	}
 }

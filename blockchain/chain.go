@@ -50,12 +50,13 @@ func FindTx(b *blockchain, targetId string) *Tx {
 	return nil
 }
 
-func (b *blockchain) AddBlock() {
+func (b *blockchain) AddBlock() *Block {
 	block := createBlock(b.NewestHash, b.Height+1, getDifficulty(b))
 	b.NewestHash = block.Hash
 	b.Height = block.Height
 	b.CurrentDifficulty = block.Difficulty
 	persistBlockchain(b)
+	return block
 }
 
 func Blocks(b *blockchain) []*Block {
@@ -151,10 +152,29 @@ func (b *blockchain) Replace(newBlocks []*Block) {
 }
 
 func Status(b *blockchain, c *gin.Context) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	json.NewEncoder(c.Writer).Encode(Blocks(Blockchain()))
 
+	utils.HandleErr(json.NewEncoder(c.Writer).Encode(Blocks(Blockchain())))
+
+}
+
+func (b *blockchain) AddPeerBlock(newBlock *Block) {
+	b.mu.Lock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	defer b.mu.Unlock()
+	b.Height += 1
+	b.CurrentDifficulty = newBlock.Difficulty
+	b.NewestHash = newBlock.Hash
+
+	persistBlockchain(b)
+	persistBlock(newBlock)
+
+	for _, tx := range newBlock.Transactions {
+		if _, ok := m.Txs[tx.Id]; ok {
+			delete(m.Txs, tx.Id)
+		}
+
+	}
 }
 
 func Blockchain() *blockchain {

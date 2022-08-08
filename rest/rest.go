@@ -61,7 +61,8 @@ func showBlocks(c *gin.Context) {
 // @Router /blocks [POST]
 // @Success 201
 func addBlocks(c *gin.Context) {
-	blockchain.Blockchain().AddBlock()
+	newBlock := blockchain.Blockchain().AddBlock()
+	p2p.BroadcastNewBlock(newBlock)
 	c.Writer.WriteHeader(http.StatusCreated)
 
 }
@@ -134,17 +135,18 @@ func getBalance(c *gin.Context) {
 // @Router /mempool [Get]
 // @Success 200
 func mempool(c *gin.Context) {
-	utils.HandleErr(json.NewEncoder(c.Writer).Encode(blockchain.Mempool.Txs))
+	utils.HandleErr(json.NewEncoder(c.Writer).Encode(blockchain.Mempool().Txs))
 }
 
 func transactions(c *gin.Context) {
 	var payload addTxPayload
 	utils.HandleErr(json.NewDecoder(c.Request.Body).Decode(&payload))
-	err := blockchain.Mempool.AddTx(payload.To, payload.Amount)
+	tx, err := blockchain.Mempool().AddTx(payload.To, payload.Amount)
 	if err != nil {
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(c.Writer).Encode(errorResponse{err.Error()})
 	}
+	p2p.BroadcastNewTx(tx)
 	c.Writer.WriteHeader(http.StatusCreated)
 
 }
@@ -158,7 +160,7 @@ func addPeer(c *gin.Context) {
 	var payload addPeerPayload
 	utils.HandleErr(json.NewDecoder(c.Request.Body).Decode(&payload))
 
-	p2p.AddPeer(payload.Address, payload.Port, port[1:])
+	p2p.AddPeer(payload.Address, payload.Port, port[1:], true)
 	c.Writer.WriteHeader(http.StatusOK)
 }
 
