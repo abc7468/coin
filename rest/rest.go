@@ -97,7 +97,7 @@ func getBlock(c *gin.Context) {
 // @Router /status [Get]
 // @Success 200
 func showBlockchain(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
+	fmt.Println(c.Request.Host)
 	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain())
 }
 

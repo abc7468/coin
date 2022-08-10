@@ -6,12 +6,15 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 )
 
+var logFn = log.Panic
+
 func HandleErr(err error) {
 	if err != nil {
-		panic(err)
+		logFn(err)
 	}
 }
 
@@ -33,7 +36,7 @@ func Hash(i any) string {
 	return fmt.Sprintf("%x", hash)
 }
 
-func GetSplitedStrings(s string, sep string, i int) string {
+func Splitter(s string, sep string, i int) string {
 	res := strings.Split(s, sep)
 	if i >= len(res) {
 		return ""

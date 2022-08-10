@@ -13,7 +13,7 @@ var upgrader = websocket.Upgrader{}
 
 func Upgrade(c *gin.Context) {
 	openPort := c.Query("openPort")
-	ip := utils.GetSplitedStrings(c.Request.RemoteAddr, ":", 0)
+	ip := utils.Splitter(c.Request.RemoteAddr, ":", 0)
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return ip != "" && openPort != ""
 	}
