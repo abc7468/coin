@@ -1,29 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"coin/cli"
+	"coin/db"
 )
 
 func main() {
-	//defer db.Close()
-	//cli.Start()
-	go func() {
-		for {
-			for {
-				fmt.Println("????")
-				time.Sleep(3000 * time.Millisecond)
+	defer db.Close()
+	cli.Start()
 
-			}
-			for {
-				fmt.Println("!!!")
-				time.Sleep(5000 * time.Millisecond)
-
-			}
-
-		}
-	}()
-	for {
-
-	}
 }

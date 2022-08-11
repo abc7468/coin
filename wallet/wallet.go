@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"math/big"
 	"os"
 )
@@ -16,17 +17,35 @@ const (
 	fileName string = "roy.wallet"
 )
 
+type fileLayer interface {
+	hasWalletFile(name string) bool
+	writeFile(name string, data []byte, perm fs.FileMode) error
+	readFile(name string) ([]byte, error)
+}
+
+type layer struct{}
+
+var files fileLayer = layer{}
+
+func (layer) readFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
+func (layer) writeFile(name string, data []byte, perm fs.FileMode) error {
+	return os.WriteFile(name, data, perm)
+}
+
+func (layer) hasWalletFile(name string) bool {
+	_, err := os.Stat(name)
+	return !os.IsNotExist(err)
+}
+
 type wallet struct {
 	privateKey *ecdsa.PrivateKey
 	Address    string // public key
 }
 
 var w *wallet
-
-func hasWalletFile() bool {
-	_, err := os.Stat(fileName)
-	return !os.IsNotExist(err)
-}
 
 func createPrivateKey() *ecdsa.PrivateKey {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -35,7 +54,7 @@ func createPrivateKey() *ecdsa.PrivateKey {
 }
 
 func restoreKey() *ecdsa.PrivateKey {
-	keyAsBytes, err := os.ReadFile(fileName)
+	keyAsBytes, err := files.readFile(fileName)
 	utils.HandleErr(err)
 	key, err := x509.ParseECPrivateKey(keyAsBytes)
 	utils.HandleErr(err)
@@ -55,7 +74,7 @@ func aFromK(key *ecdsa.PrivateKey) string {
 func persistKey(key *ecdsa.PrivateKey) {
 	bytes, err := x509.MarshalECPrivateKey(key)
 	utils.HandleErr(err)
-	err = os.WriteFile(fileName, bytes, 0644)
+	err = files.writeFile(fileName, bytes, 0644)
 	utils.HandleErr(err)
 }
 
@@ -97,7 +116,7 @@ func Verify(signature, payload, address string) bool {
 func Wallet() *wallet {
 	if w == nil {
 		w = &wallet{}
-		if hasWalletFile() {
+		if files.hasWalletFile(fileName) {
 			w.privateKey = restoreKey()
 		} else {
 			key := createPrivateKey()
