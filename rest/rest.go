@@ -6,6 +6,7 @@ import (
 	"coin/p2p"
 	"coin/utils"
 	"coin/wallet"
+	"github.com/whatap/go-api/httpc"
 	"strings"
 
 	"context"
@@ -114,12 +115,7 @@ func httpWithRequest(method string, callUrl string, body string, headers http.He
 // @Router /blocks [GET]
 // @Success 200
 func showBlocks(c *gin.Context) {
-	fmt.Println("Request -", c.Request)
 
-	ctx := c.Request.Context()
-	trace.Step(ctx, "Text Message", "Message", 3, 3)
-
-	getUser(ctx)
 	blockchain.Status(blockchain.Blockchain(), c)
 }
 
@@ -276,6 +272,26 @@ func Start(aPort int) {
 	defer trace.Shutdown()
 
 	r.Use(loggerMiddleware(), whatapgin.Middleware())
+	r.GET("/", func(c *gin.Context) {
+		ctx := c.Request.Context()
+		fmt.Println("Request -", c.Request)
+
+		callUrl := "http://localhost:4000/blocks"
+		httpcCtx, _ := httpc.Start(ctx, callUrl)
+		var buffer bytes.Buffer
+		if statusCode, data, err := httpWithRequest("GET", callUrl, "", httpc.GetMTrace(httpcCtx)); err == nil {
+			httpc.End(httpcCtx, statusCode, "", nil)
+			buffer.WriteString(fmt.Sprintln("httpc callUrl=", callUrl, ", statuscode=", statusCode, ", data=", data))
+		} else {
+			httpc.End(httpcCtx, -1, "", err)
+			buffer.WriteString(fmt.Sprintln("httpc Error callUrl=", callUrl, ", err=", err))
+		}
+
+		trace.Step(ctx, "Text Message 2", "Message2", 6, 6)
+		c.JSON(http.StatusOK, gin.H{
+			"message": string(buffer.Bytes()),
+		})
+	})
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
 	r.GET("/status", showBlockchain)
