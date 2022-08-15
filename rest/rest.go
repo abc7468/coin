@@ -1,16 +1,25 @@
 package rest
 
 import (
+	"bytes"
 	"coin/blockchain"
 	"coin/p2p"
 	"coin/utils"
 	"coin/wallet"
+	"strings"
+
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/whatap/go-api/instrumentation/github.com/gin-gonic/gin/whatapgin"
+	"github.com/whatap/go-api/method"
+	"github.com/whatap/go-api/trace"
+	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 var port string
@@ -38,6 +47,64 @@ type addPeerPayload struct {
 	Port    string `json:"port"`
 }
 
+func getUser(ctx context.Context) {
+	methodCtx, _ := method.Start(ctx, "getUser")
+	defer method.End(methodCtx, nil)
+	time.Sleep(time.Duration(1) * time.Second)
+}
+
+func httpGet(callUrl string) (int, string, error) {
+	fmt.Println("httpGet ", callUrl)
+	// GET 호출
+	if resp, err := http.Get(callUrl); err == nil {
+		defer resp.Body.Close()
+		fmt.Println("status=", resp.StatusCode)
+
+		// 결과 출력
+		if data, err := ioutil.ReadAll(resp.Body); err == nil {
+			return resp.StatusCode, string(data), err
+		} else {
+			return resp.StatusCode, "", err
+		}
+
+	} else {
+		fmt.Println(err)
+		return -1, "", err
+	}
+}
+func httpWithRequest(method string, callUrl string, body string, headers http.Header) (int, string, error) {
+	fmt.Println("httpGetWithRequest ", method, ", ", callUrl, ", ", body, ", ", headers)
+	timeout := time.Duration(10 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	if req, err := http.NewRequest(strings.ToUpper(method), callUrl, bytes.NewBufferString(body)); err == nil {
+		if headers != nil {
+			for key, _ := range headers {
+				req.Header.Add(key, headers.Get(key))
+			}
+		}
+		if resp, err := client.Do(req); err == nil {
+			defer resp.Body.Close()
+			if data, err := ioutil.ReadAll(resp.Body); err == nil {
+				fmt.Println("status=", resp.StatusCode)
+				return resp.StatusCode, string(data), err
+			} else {
+				fmt.Println("Read response Error ", err)
+				return resp.StatusCode, "", err
+			}
+		} else {
+			fmt.Println("client.Do Error ", err)
+			return -2, "", err
+		}
+
+	} else {
+		fmt.Println("NewRequest Error ", err)
+		return -1, "", err
+	}
+}
+
 // Welcome godoc
 // @Summary 현재 blockchain의 모든 Block을 출력.
 // @Description blockchain의 현 상태를 출력.
@@ -47,6 +114,12 @@ type addPeerPayload struct {
 // @Router /blocks [GET]
 // @Success 200
 func showBlocks(c *gin.Context) {
+	fmt.Println("Request -", c.Request)
+
+	ctx := c.Request.Context()
+	trace.Step(ctx, "Text Message", "Message", 3, 3)
+
+	getUser(ctx)
 	blockchain.Status(blockchain.Blockchain(), c)
 }
 
@@ -96,7 +169,7 @@ func getBlock(c *gin.Context) {
 // @Router /status [Get]
 // @Success 200
 func showBlockchain(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
+	fmt.Println(c.Request.Host)
 	json.NewEncoder(c.Writer).Encode(blockchain.Blockchain())
 }
 
@@ -191,10 +264,18 @@ func CORSMiddleware() gin.HandlerFunc {
 }
 
 func Start(aPort int) {
+
 	port = fmt.Sprintf(":%d", aPort)
 	r := gin.Default()
+	//docs.SwaggerInfo.Description = "This is a sample server for Swagger."
+	//docs.SwaggerInfo.Version = "1.0"
+	//docs.SwaggerInfo.Host = fmt.Sprintf("localhost%s", port)
+	//docs.SwaggerInfo.Title = "Swagger Example Test"
+	config := make(map[string]string)
+	trace.Init(config)
+	defer trace.Shutdown()
 
-	r.Use(loggerMiddleware())
+	r.Use(loggerMiddleware(), whatapgin.Middleware())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/blocks", showBlocks)
 	r.GET("/status", showBlockchain)
