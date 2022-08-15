@@ -2,7 +2,6 @@ package rest
 
 import (
 	"coin/blockchain"
-	"coin/docs"
 	"coin/p2p"
 	"coin/utils"
 	"coin/wallet"
@@ -194,10 +193,10 @@ func CORSMiddleware() gin.HandlerFunc {
 func Start(aPort int) {
 	port = fmt.Sprintf(":%d", aPort)
 	r := gin.Default()
-	docs.SwaggerInfo.Description = "This is a sample server for Swagger."
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = fmt.Sprintf("localhost%s", port)
-	docs.SwaggerInfo.Title = "Swagger Example Test"
+	//docs.SwaggerInfo.Description = "This is a sample server for Swagger."
+	//docs.SwaggerInfo.Version = "1.0"
+	//docs.SwaggerInfo.Host = fmt.Sprintf("localhost%s", port)
+	//docs.SwaggerInfo.Title = "Swagger Example Test"
 
 	r.Use(loggerMiddleware())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
