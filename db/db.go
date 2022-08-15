@@ -4,7 +4,6 @@ import (
 	"coin/utils"
 	"fmt"
 	bolt "go.etcd.io/bbolt"
-	"os"
 )
 
 const (
@@ -18,7 +17,9 @@ const (
 var db *bolt.DB
 
 func getDbName() string {
-	port := os.Args[2][6:]
+
+	port := "4000"
+
 	return fmt.Sprintf("%s_%s.db", dbName, port)
 }
 func DB() *bolt.DB {
