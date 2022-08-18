@@ -22,15 +22,24 @@ type blockchain struct {
 	mu                sync.Mutex
 }
 
+type storage interface {
+	FindBlock(hash string) []byte
+	SaveBlock(hash string, data []byte)
+	SaveChain(data []byte)
+	LoadChain() []byte
+	DeleteAllBlocks()
+}
+
 var b *blockchain
 var once sync.Once
+var dbStorage storage = db.DB{}
 
 func (b *blockchain) restore(data []byte) {
 	utils.FromBytes(b, data)
 }
 
 func persistBlockchain(b *blockchain) {
-	db.SaveCheckpoint(utils.ToBytes(b))
+	dbStorage.SaveChain(utils.ToBytes(b))
 }
 
 func Txs(b *blockchain) []*Tx {
@@ -145,7 +154,7 @@ func (b *blockchain) Replace(newBlocks []*Block) {
 	b.Height = len(newBlocks)
 	b.NewestHash = newBlocks[0].Hash
 	persistBlockchain(b)
-	db.EmptyBlocks()
+	dbStorage.DeleteAllBlocks()
 	for _, block := range newBlocks {
 		persistBlock(block)
 	}
@@ -182,7 +191,7 @@ func Blockchain() *blockchain {
 		b = &blockchain{
 			Height: 0,
 		}
-		checkpoint := db.Checkpoint()
+		checkpoint := dbStorage.LoadChain()
 		if checkpoint == nil {
 			b.AddBlock()
 		} else {
