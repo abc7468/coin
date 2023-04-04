@@ -18,3 +18,5 @@
 3. 단순히 적용만 시키기 보단 블로그에 과정을 포스팅
 
 ---
+
+![loading](https://user-images.githubusercontent.com/37099761/229709360-976034ed-5357-48f1-96f8-a50219c73aea.gif)
